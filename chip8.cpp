@@ -2,22 +2,43 @@
 
 #define MEM_SIZE 4096  // 4KB
 #define NUM_REG 16
-#define WIDTH 64
-#define HEIGHT 32
+#define GFX_WIDTH 64
+#define GFX_HEIGHT 32
 #define STACK_SIZE 16
 #define KEY_SIZE 16
+#define FONT_SIZE 80
 
 unsigned short opcode;  // current opcode
 unsigned char memory[MEM_SIZE];
 unsigned char V[NUM_REG];  // general purpose registers
 unsigned short I;  // 16-bit index register
 unsigned short PC;  // program counter
-unsigned char gfx[WIDTH * HEIGHT];
+unsigned char gfx[GFX_WIDTH * GFX_HEIGHT];
+unsigned bool draw_flag;
 unsigned char delay_timer;
 unsigned char sound_timer;
 unsigned short stack[STACK_SIZE];
 unsigned short sp;  // stack pointer
 unsigned char key[KEY_SIZE];
+unsigned char chip8_fontset[FONT_SIZE] = 
+{
+    0xF0, 0x90, 0x90, 0x90, 0xF0,  // 0
+    0x20, 0x60, 0x20, 0x20, 0x70,  // 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0,  // 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0,  // 3
+    0x90, 0x90, 0xF0, 0x10, 0x10,  // 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0,  // 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0,  // 6
+    0xF0, 0x10, 0x20, 0x40, 0x40,  // 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0,  // 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0,  // 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90,  // A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0,  // B
+    0xF0, 0x80, 0x80, 0x80, 0xF0,  // C
+    0xE0, 0x90, 0x90, 0x90, 0xE0,  // D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0,  // E
+    0xF0, 0x80, 0xF0, 0x80, 0x80   // F
+}
 
 // Initialize registers and memory once
 void chip8::initialize() {
@@ -28,6 +49,7 @@ void chip8::initialize() {
     sp = 0;
 
     // Clear display
+    draw_flag = false;
     // Clear stack
     // Clear registers V0-VF
     // Clear memory
@@ -37,6 +59,8 @@ void chip8::initialize() {
         memory[i] = chip8_fontset[i];
 
     // Reset timers
+    delay_timer = 0;
+    sound_timer = 0;
 }
 
 void chip8::loadGame() {
@@ -44,7 +68,7 @@ void chip8::loadGame() {
     // Start filling at memory location 0x200 == 512
     
     for (int i = 0; i < buffer_size; i++)
-        memory[i + 512] = buffer[i];
+        memory[i + 0x200] = buffer[i];
 }
 
 // 
@@ -176,22 +200,39 @@ void chip8::emulateCycle() {
             V[X(opcode)] = (rand() % 256) & NN(opcode);
 	    PC += 2;
             break;
-	// ******************************
-        case 0xD000:  // DXYN: Draws a sprite at (VX, VY) with width of 8 pixels and height of N pixels starting at address stored in I
+	case 0xD000:  // DXYN: Draws a sprite at (VX, VY) with width of 8 pixels and height of N pixels starting at address stored in I
                       // Sets VF to 01 if any set pixels are changed to unset, and 00 otherwise
+	    const unsigned short X = V[X(opcode)];
+	    const unsigned short Y = V[Y(opcode)];
+	    const unsigned short HEIGHT = N(opcode);
+	    const unsigned short WIDTH = 8;
+	    V[0xF];
+	    for (unsigned short y_line = 0; y_line < HEIGHT; y_line++) {
+		unsigned short pixel = memory[I + y_line];
+		for (unsigned short x_line = 0; x_line < WIDTH; x_line++) {
+		    if (pixel & (0x80 >> x_line)) {
+			if (gfx[X + x_line + (Y + y_line) * GFX_WIDTH] == 1)
+			    V[0xF] = 1;
+			gfx[X + x_line + (Y + y_line) * GFX_WIDTH] ^= 1;
+		    }
+		}
+	    }
+	    draw_flag = true;
 	    PC += 2;
             break;
         case 0xE000:
             switch (opcode & 0x00FF) {
-		// ************************
                 case 0x009E:  // EX9E: Skips the next instruction if the key stored in VX is pressed
-		    //if (pressed)
-		//	PC += 4;
+		    if (key[V[X(opcode)]])
+			PC += 4;
+		    else
+			PC += 2;
                     break;
-		// ************************
                 case 0x00A1:  // EXA1: Skips the next instruction if the key stored in VX is not pressed
-                    //if (not pressed)
-		//	PC += 4;
+                    if (!key[V[X(opcode)]])
+			PC += 4;
+		    else
+			PC += 2;
 		    break;
                 default:
                     printf("Unknown opcode: 0x%X\n", opcode);
