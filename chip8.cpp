@@ -1,25 +1,8 @@
 #include "chip8.h"
+#include <stdio.h>
 
-#define MEM_SIZE 4096  // 4KB
-#define NUM_REG 16
-#define GFX_WIDTH 64
-#define GFX_HEIGHT 32
-#define STACK_SIZE 16
-#define KEY_SIZE 16
 #define FONT_SIZE 80
 
-unsigned short opcode;  // current opcode
-unsigned char memory[MEM_SIZE];
-unsigned char V[NUM_REG];  // general purpose registers
-unsigned short I;  // 16-bit index register
-unsigned short PC;  // program counter
-unsigned char gfx[GFX_WIDTH * GFX_HEIGHT];
-unsigned bool draw_flag;
-unsigned char delay_timer;
-unsigned char sound_timer;
-unsigned short stack[STACK_SIZE];
-unsigned short sp;  // stack pointer
-unsigned char key[KEY_SIZE];
 unsigned char chip8_fontset[FONT_SIZE] = 
 {
     0xF0, 0x90, 0x90, 0x90, 0xF0,  // 0
@@ -41,7 +24,7 @@ unsigned char chip8_fontset[FONT_SIZE] =
 }
 
 // Initialize registers and memory once
-void chip8::initialize() {
+void chip8::init() {
     const unsigned short INITIAL_PC = 0x200;
     PC = INITIAL_PC;
     I = 0;
@@ -49,11 +32,22 @@ void chip8::initialize() {
     sp = 0;
 
     // Clear display
+    for (int i = 0; i < GFX_WIDTH * GFX_HEIGHT; i++)
+	gfx[i] = 0;
     draw_flag = false;
-    // Clear stack
-    // Clear registers V0-VF
-    // Clear memory
 
+    // Clear stack
+    for (int i = 0; i < STACK_SIZE; i++)
+	stack[i] = 0;
+
+    // Clear registers V0-VF
+    for (int i = 0; i < NUM_REG; i++)
+	V[i] = 0;
+
+    // Clear memory
+    for (int i = 0; i < MEM_SIZE; i++)
+	memory[i] = 0;
+    
     // Load fontset
     for (int i = 0; i < 80; i++)
         memory[i] = chip8_fontset[i];
@@ -63,29 +57,36 @@ void chip8::initialize() {
     sound_timer = 0;
 }
 
-void chip8::loadGame() {
-    // User fopen in binary mode
-    // Start filling at memory location 0x200 == 512
-    
+bool chip8::loadGame(char * game_name) {
+    FILE * game_file = fopen(game_name, rb);
+    if (game_file == NULL)
+        return false;
+
+    const int START_LOCATION = 0x200;
     for (int i = 0; i < buffer_size; i++)
-        memory[i + 0x200] = buffer[i];
+        memory[i + START_LOCATION] = buffer[i];
+    
+    return true;
 }
 
 // 
 void chip8::emulateCycle() {
     opcode = memory[PC] << 8 | memory[PC + 1];
-
+    std::cout << std::hex << opcode << std::endl;
+    
     switch (opcode & 0xF000) {
         case 0x0000:
             switch (opcode & 0x0FFF) {
 		// **********************
-                case 0x00E0:  // 00E0: Clears the screen 
-                    // Execute opcode
+                case 0x00E0:  // 00E0: Clears the screen
+		    for (int i = 0; i < GFX_WIDTH * GFX_HEIGHT; i++)
+			gfx[i] = 0;
+                    draw_flag = true;
 		    PC += 2;
                     break;
                 case 0x00EE:  // 00EE: Returns from subroutine
-                    PC += 2;  // update program counter??
-		    return;
+                    PC = stackPop();
+		    PC += 2;
                     break;
                 default:
                     printf("Unknown opcode: 0x%X\n", opcode);
@@ -301,6 +302,10 @@ void chip8::emulateCycle() {
             printf("BEEP!\n");
         sound_timer--;
     }
+}
+
+bool chpi8::drawFlagIsSet() {
+	return draw_flag;
 }
 
 void chip8::setKeys() {

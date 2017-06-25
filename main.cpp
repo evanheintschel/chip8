@@ -5,17 +5,18 @@ chip8 myChip8;
 
 int main (int argc, int **argv) {
     // Set up render system and register input callbacks
-    setupGraphics();
-    setupInput();
+    //setupGraphics();
+    //setupInput();
 
     // Initialize the Chip8 system and load the game into memory
-    myChip8.initialize();
-    //myChip8.loadGame("pong");
+    myChip8.init();
+    if (!myChip8.loadGame("PONG"))
+      return -1;
 
     // Emulation loop
     for (;;) {
 	myChip8.emulateCycle();
-	if (myChip8.drawFlag)
+	if (myChip8.drawFlagIsSet())
 	    drawGraphics();
         myChip8.setKeys();
     }
