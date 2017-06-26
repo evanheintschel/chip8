@@ -10,14 +10,14 @@ int main (int argc, char **argv) {
 
     // Initialize the Chip8 system and load the game into memory
     myChip8.init();
-    if (!myChip8.loadApplication("PONG"))
+    if (!myChip8.loadApplication("tetris.c8"))
       return -1;
 
     // Emulation loop
     for (;;) {
-	myChip8.emulateCycle();
-	if (myChip8.drawFlagIsSet())
-	    //drawGraphics();
+	    myChip8.emulateCycle();
+	    if (myChip8.drawFlagIsSet())
+	        //drawGraphics();
         myChip8.setKeys();
     }
     return 0;

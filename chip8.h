@@ -38,6 +38,7 @@ class chip8 {
 	unsigned short sp;  // stack pointer
 	unsigned char key[KEY_SIZE];
 
-	void stackPush(unsigned short val);
-	bool stackPop();
+	int fileSize(const char *filename);
+    void stackPush(unsigned short val);
+	unsigned short stackPop();
 };
