@@ -57,7 +57,7 @@ void chip8::init() {
     sound_timer = 0;
 }
 
-bool chip8::loadGame(char * game_name) {
+bool chip8::loadApplication(const char * game_name) {
     FILE * game_file = fopen(game_name, rb);
     if (game_file == NULL)
         return false;

@@ -16,11 +16,13 @@ class chip8 {
 	chip8();
 	~chip8();
 	
+    void init();
 	void emulateCycle();
 	void debugRender();
 	bool loadApplication(const char *filename);
 	bool drawFlagIsSet();
-	
+	void setKeys();
+
     private:
 
 	unsigned short opcode;  // current opcode
@@ -29,14 +31,13 @@ class chip8 {
 	unsigned short I;  // 16-bit index register
 	unsigned short PC;  // program counter
 	unsigned char gfx[GFX_WIDTH * GFX_HEIGHT];
-	unsigned bool draw_flag;
+    bool draw_flag;
 	unsigned char delay_timer;
 	unsigned char sound_timer;
 	unsigned short stack[STACK_SIZE];
 	unsigned short sp;  // stack pointer
 	unsigned char key[KEY_SIZE];
 
-	void init();
 	void stackPush(unsigned short val);
 	bool stackPop();
-}
+};
